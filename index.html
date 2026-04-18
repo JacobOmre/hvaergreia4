@@ -1167,14 +1167,22 @@ async function sendMM() {
     document.getElementById(loadId) && document.getElementById(loadId).remove();
     morningHistory.push({role:'assistant',content:reply});
 
-    // Try to parse as JSON with ideas
+    // Parse JSON from response - strip code fences and find JSON object
     var parsed = null;
     try {
       var jsonStr = reply.trim();
-      // Strip markdown code fences if present
-      jsonStr = jsonStr.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
-      var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (jsonMatch) jsonStr = jsonMatch[0];
+      // Remove ```json ... ``` or ``` ... ``` wrappers
+      if (jsonStr.indexOf('```') !== -1) {
+        var fenceStart = jsonStr.indexOf('\n', jsonStr.indexOf('```'));
+        var fenceEnd = jsonStr.lastIndexOf('```');
+        if (fenceStart !== -1 && fenceEnd > fenceStart) {
+          jsonStr = jsonStr.substring(fenceStart, fenceEnd).trim();
+        }
+      }
+      // Find the outermost { ... }
+      var start = jsonStr.indexOf('{');
+      var end = jsonStr.lastIndexOf('}');
+      if (start !== -1 && end > start) jsonStr = jsonStr.substring(start, end + 1);
       parsed = JSON.parse(jsonStr);
     } catch(e) { parsed = null; }
 
