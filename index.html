@@ -1154,12 +1154,11 @@ async function sendMM() {
   msgs.appendChild(loadDiv); msgs.scrollTop = msgs.scrollHeight;
 
   var systemPrompt = 'Du er redaksjonssjef for serien "Hva er greia med..." på NRK Nordland. ' +
-    'ALLE ideer du foreslår MÅ ha tittelen i formatet "Hva er greia med [tema]?". ' +
-    'Ideer skal ha lokal Nordland/Bodø-forankring der det er naturlig. ' +
-    'Når du foreslår ideer, svar KUN med gyldig JSON uten tekst før eller etter, i dette formatet: ' +
-    '{"ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Kort konkret vinkel og hvorfor dette er en god NRK-sak.","format":"video","lokal":true,"experts":["Fullt navn, tittel, institusjon"],"sources":[{"text":"Kilde","url":"https://ekte-url.no"}],"cases":["Konkret case-person"]}],"intro":"En setning."} ' +
-    'Bruk BARE tag-verdier: bodø, nasjonal, teknologi, kultur, samfunn, sport. ' +
-    'Gi alltid 4-5 ideer. Bruk EKTE URLer til norske nettsider. Svar på norsk.';
+    'VIKTIG: Svar KUN med rå JSON. Ingen ```json, ingen ``` og ingen tekst utenfor JSON-objektet. ' +
+    'ALLE titler MÅ være i formatet "Hva er greia med [tema]?". ' +
+    'JSON-format: {"intro":"En setning på norsk.","ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Konkret vinkel.","format":"video","lokal":true,"experts":["Navn, tittel, institusjon"],"sources":[{"text":"Kildenavn","url":"https://ekte-url.no"}],"cases":["Case-tips"]}]} ' +
+    'Gyldige tag-verdier: bodo, nasjonal, teknologi, kultur, samfunn, sport. ' +
+    'Gi 4-5 ideer med lokal Nordland-forankring. Bruk ekte norske URLer.';
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:systemPrompt,messages:morningHistory})});
     var data = await res.json();
@@ -1167,17 +1166,20 @@ async function sendMM() {
     document.getElementById(loadId) && document.getElementById(loadId).remove();
     morningHistory.push({role:'assistant',content:reply});
 
-    // Parse JSON - extract from code fences or raw
+    // Parse JSON - find first { to last } and parse
     var parsed = null;
     try {
       var raw = reply.trim();
-      // Always extract just the { ... } block regardless of surrounding content
       var s = raw.indexOf('{');
       var e2 = raw.lastIndexOf('}');
       if (s !== -1 && e2 > s) {
-        parsed = JSON.parse(raw.substring(s, e2 + 1));
+        var jsonChunk = raw.substring(s, e2 + 1);
+        parsed = JSON.parse(jsonChunk);
       }
-    } catch(e) { parsed = null; }
+    } catch(parseErr) {
+      parsed = null;
+      console.warn('MM parse failed:', parseErr.message, 'Reply was:', reply.substring(0,200));
+    }
 
     if (parsed && parsed.ideas && parsed.ideas.length) {
       mmParsedIdeas = parsed.ideas;
