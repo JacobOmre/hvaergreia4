@@ -820,60 +820,66 @@ function tl(t) { return {bodø:'Bodø',nasjonal:'Nasjonalt',teknologi:'Teknologi
 function sl(s) { return {ide:'Idé',arbeid:'Under arbeid',publisert:'Publisert'}[s]||s; }
 
 function renderCardHTML(i) {
-  const pColors = {1:'var(--coral)',2:'var(--amber)',3:'var(--accent)'};
-  const srcHtml = (i.sources||[]).map(s=>`<div class="exp-item">· <a href="${s.url}" target="_blank">${s.text}</a></div>`).join('')||'<span style="color:var(--text3);">–</span>';
-  const expHtml = (i.experts||[]).map(e=>`<div class="exp-item">· ${e.text}</div>`).join('')||'<span style="color:var(--text3);">–</span>';
-  const caseHtml = (i.cases||[]).map(c=>`<div class="exp-item">· ${c.text}</div>`).join('')||'<span style="color:var(--text3);">–</span>';
-  return `<div class="card${i.starred?' starred':''}${i.priority===1?' p1':i.priority===2?' p2':''}" id="card-${i.id}">
-    <div class="card-top">
-      <div class="card-tags">
-        <span class="tag tag-${i.tag}">${tl(i.tag)}</span>
-        <span class="status-tag s-${i.status||'ide'}" onclick="cycleStatus(${i.id})" title="Klikk for å endre">${sl(i.status||'ide')}</span>
-      </div>
-    </div>
-    <div class="card-title">${i.title}</div>
-    ${i.journalist||i.frist?`<div class="card-meta">${i.journalist?`<span>👤 ${i.journalist}</span>`:''}${i.frist?`<span${i.frist<new Date().toISOString().split('T')[0]?' style="color:var(--coral)"':''}>📅 ${i.frist}</span>`:''}</div>`:''}
-    <div class="card-why">${i.why}</div>
-    <div class="badges">
-      ${i.tidloes?'<span class="badge b-tidloes">Tidløs</span>':''}
-      ${i.lokal?'<span class="badge b-lokal">Lokal</span>':''}
-      ${i.format?`<span class="badge b-format">${i.format}</span>`:''}
-      ${i.priority&&i.priority<3?`<span class="badge" style="background:${pColors[i.priority]}20;color:${pColors[i.priority]}">${['','Høy','Middels'][i.priority]}</span>`:''}
-    </div>
-    <div class="expander">
-      <div class="exp-toggle" onclick="expToggle(this)"><span>📎 Kilder (${(i.sources||[]).length})</span><span class="exp-arrow">▼</span></div>
-      <div class="exp-body">${srcHtml}</div>
-      <div class="exp-toggle" onclick="expToggle(this)"><span>🎤 Eksperter (${(i.experts||[]).length})</span><span class="exp-arrow">▼</span></div>
-      <div class="exp-body">${expHtml}</div>
-      <div class="exp-toggle" onclick="expToggle(this)"><span>👤 Case-tips (${(i.cases||[]).length})</span><span class="exp-arrow">▼</span></div>
-      <div class="exp-body">${caseHtml}</div>
-    </div>
-    <div class="card-actions">
-      <button class="act${i.starred?' starred':''}" onclick="toggleStar(${i.id})">${i.starred?'⭐':'☆'}</button>
-      <button class="act ai" onclick="openAIForIdea(${i.id})">✦ AI</button>
-      <button class="act" style="color:var(--blue);border-color:rgba(74,158,232,0.3)" onclick="editIdea(${i.id})">Rediger</button>
-      <button class="act danger" onclick="delIdea(${i.id})">Slett</button>
-    </div>
-  </div>`;
+  var pC = {1:'var(--coral)',2:'var(--amber)',3:'var(--accent)'};
+  var today = new Date().toISOString().split('T')[0];
+  var src = (i.sources||[]).map(function(s){return '<div class="exp-item">\xb7 <a href="'+s.url+'" target="_blank">'+s.text+'</a></div>';}).join('')||'<span style="color:var(--text3);">–</span>';
+  var exp = (i.experts||[]).map(function(e){return '<div class="exp-item">\xb7 '+e.text+'</div>';}).join('')||'<span style="color:var(--text3);">–</span>';
+  var cas = (i.cases||[]).map(function(c){return '<div class="exp-item">\xb7 '+c.text+'</div>';}).join('')||'<span style="color:var(--text3);">–</span>';
+  var meta = '';
+  if (i.journalist||i.frist) {
+    meta = '<div class="card-meta">';
+    if (i.journalist) meta += '<span>👤 '+i.journalist+'</span>';
+    if (i.frist) meta += '<span'+(i.frist<today?' style="color:var(--coral)"':'')+'>📅 '+i.frist+'</span>';
+    meta += '</div>';
+  }
+  var badges = '<div class="badges">';
+  if (i.tidloes) badges += '<span class="badge b-tidloes">Tidløs</span>';
+  if (i.lokal) badges += '<span class="badge b-lokal">Lokal</span>';
+  if (i.format) badges += '<span class="badge b-format">'+i.format+'</span>';
+  if (i.priority && i.priority<3) badges += '<span class="badge" style="background:'+pC[i.priority]+'20;color:'+pC[i.priority]+'">'+(['','Høy','Middels'][i.priority])+'</span>';
+  badges += '</div>';
+  var cls = 'card'+(i.starred?' starred':'')+(i.priority===1?' p1':i.priority===2?' p2':'');
+  var star = i.starred ? '⭐' : '☆';
+  return '<div class="'+cls+'" id="card-'+i.id+'">'
+    +'<div class="card-top"><div class="card-tags">'
+    +'<span class="tag tag-'+i.tag+'">'+tl(i.tag)+'</span>'
+    +'<span class="status-tag s-'+(i.status||'ide')+'" onclick="cycleStatus('+i.id+')" title="Klikk for å endre">'+sl(i.status||'ide')+'</span>'
+    +'</div></div>'
+    +'<div class="card-title">'+i.title+'</div>'
+    +meta
+    +'<div class="card-why">'+i.why+'</div>'
+    +badges
+    +'<div class="expander">'
+    +'<div class="exp-toggle" onclick="expToggle(this)"><span>📎 Kilder ('+(i.sources||[]).length+')</span><span class="exp-arrow">▼</span></div><div class="exp-body">'+src+'</div>'
+    +'<div class="exp-toggle" onclick="expToggle(this)"><span>🎤 Eksperter ('+(i.experts||[]).length+')</span><span class="exp-arrow">▼</span></div><div class="exp-body">'+exp+'</div>'
+    +'<div class="exp-toggle" onclick="expToggle(this)"><span>👤 Case-tips ('+(i.cases||[]).length+')</span><span class="exp-arrow">▼</span></div><div class="exp-body">'+cas+'</div>'
+    +'</div>'
+    +'<div class="card-actions">'
+    +'<button class="act'+(i.starred?' starred':'')+'" onclick="toggleStar('+i.id+')">'+star+'</button>'
+    +'<button class="act ai" onclick="openAIForIdea('+i.id+')">✦ AI</button>'
+    +'<button class="act" style="color:var(--blue);border-color:rgba(74,158,232,0.3)" onclick="editIdea('+i.id+')">Rediger</button>'
+    +'<button class="act danger" onclick="delIdea('+i.id+')">Slett</button>'
+    +'</div></div>';
 }
 
 function renderListHTML(i) {
-  return `<div class="card${i.starred?' starred':''}" style="flex-direction:row;align-items:center;padding:10px 14px;gap:12px;">
-    <div style="flex:1;min-width:0;">
-      <div style="display:flex;gap:5px;margin-bottom:3px;flex-wrap:wrap;align-items:center;">
-        <span class="tag tag-${i.tag}">${tl(i.tag)}</span>
-        <span class="status-tag s-${i.status||'ide'}" onclick="cycleStatus(${i.id})">${sl(i.status||'ide')}</span>
-        ${i.journalist?`<span style="font-size:11px;color:var(--text3);">👤 ${i.journalist}</span>`:''}
-        ${i.frist?`<span style="font-size:11px;color:${i.frist<new Date().toISOString().split('T')[0]?'var(--coral)':'var(--text3)'}">📅 ${i.frist}</span>`:''}
-      </div>
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">${i.title}</div>
-      <div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.why}</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;min-width:80px;align-items:flex-end;">
-      <button class="act ai btn-sm" onclick="openAIForIdea(${i.id})">✦ AI</button>
-      <button class="act btn-sm" style="color:var(--blue);border-color:rgba(74,158,232,0.3)" onclick="editIdea(${i.id})">Rediger</button>
-    </div>
-  </div>`;
+  var today = new Date().toISOString().split('T')[0];
+  var h = '<div class="card'+(i.starred?' starred':'')+'" style="flex-direction:row;align-items:center;padding:10px 14px;gap:12px;">';
+  h += '<div style="flex:1;min-width:0;">';
+  h += '<div style="display:flex;gap:5px;margin-bottom:3px;flex-wrap:wrap;align-items:center;">';
+  h += '<span class="tag tag-'+i.tag+'">'+tl(i.tag)+'</span>';
+  h += '<span class="status-tag s-'+(i.status||'ide')+'" onclick="cycleStatus('+i.id+')">'+sl(i.status||'ide')+'</span>';
+  if (i.journalist) h += '<span style="font-size:11px;color:var(--text3);">👤 '+i.journalist+'</span>';
+  if (i.frist) h += '<span style="font-size:11px;color:'+(i.frist<today?'var(--coral)':'var(--text3)')+';">📅 '+i.frist+'</span>';
+  h += '</div>';
+  h += '<div style="font-family:\'Syne\',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">'+i.title+'</div>';
+  h += '<div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+i.why+'</div>';
+  h += '</div>';
+  h += '<div style="display:flex;flex-direction:column;gap:4px;min-width:80px;align-items:flex-end;">';
+  h += '<button class="act ai btn-sm" onclick="openAIForIdea('+i.id+')">✦ AI</button>';
+  h += '<button class="act btn-sm" style="color:var(--blue);border-color:rgba(74,158,232,0.3)" onclick="editIdea('+i.id+')">Rediger</button>';
+  h += '</div></div>';
+  return h;
 }
 
 function expToggle(el) { el.classList.toggle('open'); el.nextElementSibling.classList.toggle('open'); }
@@ -1039,7 +1045,7 @@ async function aiToManus() {
   const ta = document.getElementById('manus-ta');
   ta.value = 'Genererer...';
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data = await res.json();
     ta.value = data.content?.map(b=>b.text||'').join('')||'';
     manusContent = ta.value;
@@ -1061,7 +1067,7 @@ async function manusAIAction(action) {
     titler: `Lag 5 ulike tittel- og ingress-forslag til denne saken. Variér mellom hard nyhetstittel, myk feature-tittel og digital klikkvennlig:\n\n${text.substring(0,400)}`
   };
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompts[action]||'Hjelp med teksten.'}]})});
+    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompts[action]||'Hjelp med teksten.'}]})});
     const data = await res.json();
     out.textContent = data.content?.map(b=>b.text||'').join('')||'';
   } catch { out.textContent='Noe gikk galt.'; }
@@ -1107,7 +1113,7 @@ async function sendMM() {
   loadDiv.innerHTML='<span class="ai-spinner"></span>';
   msgs.appendChild(loadDiv); msgs.scrollTop=msgs.scrollHeight;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,system:'Du er redaksjonssjef og idéutvikler for "Hva er greia med..."-serien på NRK Nordland. Gi konkrete, friske ideer med lokal Nordland-forankring når mulig. Svar på norsk. Vær direkte og journalistisk skarp.',messages:morningHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,system:'Du er redaksjonssjef og idéutvikler for "Hva er greia med..."-serien på NRK Nordland. Gi konkrete, friske ideer med lokal Nordland-forankring når mulig. Svar på norsk. Vær direkte og journalistisk skarp.',messages:morningHistory})});
     const data=await res.json();
     const reply=data.content?.map(b=>b.text||'').join('')||'Ingen respons.';
     document.getElementById(loadId)?.remove();
@@ -1164,7 +1170,7 @@ async function doResearch() {
   out.innerHTML=`<div class="research-box"><div class="spin-wrap"><span class="ai-spinner"></span> Søker og analyserer...</div></div>`;
   researchHistory=[{role:'user',content:`Du er en research-assistent for NRK Nordland. Svar på norsk. Gjør grundig research på: ${q}\n\nGi:\n1. Sammendrag av sentrale fakta\n2. Relevante norske lover/regler hvis aktuelt\n3. Navngitte eksperter å kontakte\n4. Viktigste internasjonale studier eller rapporter\n5. Lokale Nordland-vinkler hvis mulig\n\nVær konkret og journalist-vennlig.`}];
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
     const data=await res.json();
     const txt=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen resultater.';
     researchHistory.push({role:'assistant',content:data.content||[]});
@@ -1183,7 +1189,7 @@ async function sendRes() {
   const d=document.createElement('div');d.className='cmsg ai';d.id=loadId;d.innerHTML='<span class="ai-spinner"></span>';
   msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
     const data=await res.json();
     const reply=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen respons.';
     document.getElementById(loadId)?.remove();
@@ -1234,7 +1240,7 @@ async function runSS() {
   spin.style.display='flex'; txt.textContent='';
   const prompt=getAIPrompt(idea,ssTab);
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     spin.style.display='none';
     txt.textContent=data.content?.map(b=>b.text||'').join('')||'Ingen respons.';
@@ -1279,7 +1285,7 @@ async function genForIdea(id, tab, outId) {
   if(!outEl)return;
   outEl.textContent='Genererer...';
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(idea,tab)}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(idea,tab)}]})});
     const data=await res.json();
     outEl.textContent=data.content?.map(b=>b.text||'').join('')||'';
   } catch { outEl.textContent='Noe gikk galt.'; }
@@ -1322,7 +1328,7 @@ async function runAI() {
   const out=document.getElementById('ai-out');
   spin.style.display='flex'; out.style.display='none'; out.textContent='';
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(aiIdea,aiTab)}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(aiIdea,aiTab)}]})});
     const data=await res.json();
     spin.style.display='none'; out.style.display='block';
     out.textContent=data.content?.map(b=>b.text||'').join('')||'Ingen respons.';
