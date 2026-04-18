@@ -1127,7 +1127,10 @@ function mmAddToBank(idx) {
     lokal: idea.lokal || false,
     starred: false,
     date: new Date().toISOString().split('T')[0],
-    sources: (idea.sources||[]).map(function(s){return {text:s,url:'#'};}),
+    sources: (idea.sources||[]).map(function(s){
+      if (typeof s === 'object') return {text:s.text||s, url:s.url||'#'};
+      return {text:s, url:'#'};
+    }),
     experts: (idea.experts||[]).map(function(e){return {text:e};}),
     cases: (idea.cases||[]).map(function(c){return {text:c};}),
   };
@@ -1151,9 +1154,9 @@ async function sendMM() {
   msgs.appendChild(loadDiv); msgs.scrollTop = msgs.scrollHeight;
 
   var isIdeaRequest = txt && /ide|forslag|serie|sak|vinkel|nordland|bod/i.test(txt);
-  var jsonExample = '{"ideas":[{"title":"Hva er greia med X?","tag":"bodo","why":"Kort vinkel.","format":"video","lokal":true,"experts":["Navn, tittel"],"sources":["Kildenavn"],"cases":["Case-tips"]}],"intro":"Innledning."}';
+  var jsonExample = '{"ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Én setning om vinkel og relevans.","format":"video","lokal":true,"experts":["Navn, tittel, institusjon"],"sources":[{"text":"Kildenavn","url":"https://eksempel.no"}],"cases":["Case-tips"]}],"intro":"Kort innledning."}';
   var systemPrompt = isIdeaRequest
-    ? 'Du er redaksjonssjef for NRK Nordland. Naar du foreslaar ideer, svar KUN i dette JSON-formatet: ' + jsonExample + ' Bruk tag-verdier: bodo, nasjonal, teknologi, kultur, samfunn, sport. Gi 3-5 ideer. Svar paa norsk.'
+    ? 'Du er redaksjonssjef for NRK Nordland. Naar du foreslaar ideer, svar KUN med gyldig JSON i dette formatet (ingen tekst foer eller etter): ' + jsonExample + ' Bruk tag-verdier: bodø, nasjonal, teknologi, kultur, samfunn, sport. Gi 3-5 konkrete ideer med ekte kilder og URLer. Svar paa norsk.'
     : 'Du er redaksjonssjef for NRK Nordland. Svar paa norsk. Vaer direkte og journalistisk skarp.';
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1500,system:systemPrompt,messages:morningHistory})});
@@ -1242,7 +1245,7 @@ async function doResearch() {
   out.innerHTML=`<div class="research-box"><div class="spin-wrap"><span class="ai-spinner"></span> Søker og analyserer...</div></div>`;
   researchHistory=[{role:'user',content:`Du er en research-assistent for NRK Nordland. Svar på norsk. Gjør grundig research på: ${q}\n\nGi:\n1. Sammendrag av sentrale fakta\n2. Relevante norske lover/regler hvis aktuelt\n3. Navngitte eksperter å kontakte\n4. Viktigste internasjonale studier eller rapporter\n5. Lokale Nordland-vinkler hvis mulig\n\nVær konkret og journalist-vennlig.`}];
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
     const data=await res.json();
     const txt=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen resultater.';
     researchHistory.push({role:'assistant',content:data.content||[]});
@@ -1261,7 +1264,7 @@ async function sendRes() {
   const d=document.createElement('div');d.className='cmsg ai';d.id=loadId;d.innerHTML='<span class="ai-spinner"></span>';
   msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
     const data=await res.json();
     const reply=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen respons.';
     document.getElementById(loadId)?.remove();
