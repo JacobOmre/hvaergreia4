@@ -1052,7 +1052,7 @@ async function aiToManus() {
   const ta = document.getElementById('manus-ta');
   ta.value = 'Genererer...';
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data = await res.json();
     ta.value = data.content?.map(b=>b.text||'').join('')||'';
     manusContent = ta.value;
@@ -1074,7 +1074,7 @@ async function manusAIAction(action) {
     titler: `Lag 5 ulike tittel- og ingress-forslag til denne saken. Variér mellom hard nyhetstittel, myk feature-tittel og digital klikkvennlig:\n\n${text.substring(0,400)}`
   };
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompts[action]||'Hjelp med teksten.'}]})});
+    const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompts[action]||'Hjelp med teksten.'}]})});
     const data = await res.json();
     out.textContent = data.content?.map(b=>b.text||'').join('')||'';
   } catch { out.textContent='Noe gikk galt.'; }
@@ -1153,13 +1153,15 @@ async function sendMM() {
   loadDiv.innerHTML = '<span class="ai-spinner"></span>';
   msgs.appendChild(loadDiv); msgs.scrollTop = msgs.scrollHeight;
 
-  var isIdeaRequest = txt && /ide|forslag|serie|sak|vinkel|nordland|bod/i.test(txt);
-  var jsonExample = '{"ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Én setning om vinkel og relevans.","format":"video","lokal":true,"experts":["Navn, tittel, institusjon"],"sources":[{"text":"Kildenavn","url":"https://eksempel.no"}],"cases":["Case-tips"]}],"intro":"Kort innledning."}';
-  var systemPrompt = isIdeaRequest
-    ? 'Du er redaksjonssjef for NRK Nordland. Naar du foreslaar ideer, svar KUN med gyldig JSON i dette formatet (ingen tekst foer eller etter): ' + jsonExample + ' Bruk tag-verdier: bodø, nasjonal, teknologi, kultur, samfunn, sport. Gi 3-5 konkrete ideer med ekte kilder og URLer. Svar paa norsk.'
-    : 'Du er redaksjonssjef for NRK Nordland. Svar paa norsk. Vaer direkte og journalistisk skarp.';
+  var systemPrompt = 'Du er redaksjonssjef for serien "Hva er greia med..." på NRK Nordland. ' +
+    'ALLE ideer du foreslår MÅ ha tittelen i formatet "Hva er greia med [tema]?". ' +
+    'Ideer skal ha lokal Nordland/Bodø-forankring der det er naturlig. ' +
+    'Når du foreslår ideer, svar KUN med gyldig JSON uten tekst før eller etter, i dette formatet: ' +
+    '{"ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Kort konkret vinkel og hvorfor dette er en god NRK-sak.","format":"video","lokal":true,"experts":["Fullt navn, tittel, institusjon"],"sources":[{"text":"Kilde","url":"https://ekte-url.no"}],"cases":["Konkret case-person"]}],"intro":"En setning."} ' +
+    'Bruk BARE tag-verdier: bodø, nasjonal, teknologi, kultur, samfunn, sport. ' +
+    'Gi alltid 4-5 ideer. Bruk EKTE URLer til norske nettsider. Svar på norsk.';
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1500,system:systemPrompt,messages:morningHistory})});
+    var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:systemPrompt,messages:morningHistory})});
     var data = await res.json();
     var reply = data.content ? data.content.map(function(b){return b.text||'';}).join('') : 'Ingen respons.';
     document.getElementById(loadId) && document.getElementById(loadId).remove();
@@ -1168,8 +1170,10 @@ async function sendMM() {
     // Try to parse as JSON with ideas
     var parsed = null;
     try {
-      var jsonStr = reply;
-      var jsonMatch = reply.match(/\{[\s\S]*\}/);
+      var jsonStr = reply.trim();
+      // Strip markdown code fences if present
+      jsonStr = jsonStr.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+      var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (jsonMatch) jsonStr = jsonMatch[0];
       parsed = JSON.parse(jsonStr);
     } catch(e) { parsed = null; }
@@ -1245,7 +1249,7 @@ async function doResearch() {
   out.innerHTML=`<div class="research-box"><div class="spin-wrap"><span class="ai-spinner"></span> Søker og analyserer...</div></div>`;
   researchHistory=[{role:'user',content:`Du er en research-assistent for NRK Nordland. Svar på norsk. Gjør grundig research på: ${q}\n\nGi:\n1. Sammendrag av sentrale fakta\n2. Relevante norske lover/regler hvis aktuelt\n3. Navngitte eksperter å kontakte\n4. Viktigste internasjonale studier eller rapporter\n5. Lokale Nordland-vinkler hvis mulig\n\nVær konkret og journalist-vennlig.`}];
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],messages:researchHistory})});
     const data=await res.json();
     const txt=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen resultater.';
     researchHistory.push({role:'assistant',content:data.content||[]});
@@ -1264,7 +1268,7 @@ async function sendRes() {
   const d=document.createElement('div');d.className='cmsg ai';d.id=loadId;d.innerHTML='<span class="ai-spinner"></span>';
   msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,tools:[{type:'web_search_20250305',name:'web_search'}],system:'Du er research-assistent for NRK Nordland. Svar på norsk.',messages:researchHistory})});
     const data=await res.json();
     const reply=data.content?.map(b=>b.text||'').filter(Boolean).join('\n\n')||'Ingen respons.';
     document.getElementById(loadId)?.remove();
@@ -1315,7 +1319,7 @@ async function runSS() {
   spin.style.display='flex'; txt.textContent='';
   const prompt=getAIPrompt(idea,ssTab);
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     spin.style.display='none';
     txt.textContent=data.content?.map(b=>b.text||'').join('')||'Ingen respons.';
@@ -1360,7 +1364,7 @@ async function genForIdea(id, tab, outId) {
   if(!outEl)return;
   outEl.textContent='Genererer...';
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(idea,tab)}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(idea,tab)}]})});
     const data=await res.json();
     outEl.textContent=data.content?.map(b=>b.text||'').join('')||'';
   } catch { outEl.textContent='Noe gikk galt.'; }
@@ -1403,7 +1407,7 @@ async function runAI() {
   const out=document.getElementById('ai-out');
   spin.style.display='flex'; out.style.display='none'; out.textContent='';
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(aiIdea,aiTab)}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:getAIPrompt(aiIdea,aiTab)}]})});
     const data=await res.json();
     spin.style.display='none'; out.style.display='block';
     out.textContent=data.content?.map(b=>b.text||'').join('')||'Ingen respons.';
