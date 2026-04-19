@@ -1153,12 +1153,16 @@ async function sendMM() {
   loadDiv.innerHTML = '<span class="ai-spinner"></span>';
   msgs.appendChild(loadDiv); msgs.scrollTop = msgs.scrollHeight;
 
-  var systemPrompt = 'Du er redaksjonssjef for serien "Hva er greia med..." på NRK Nordland. ' +
+  var today = new Date();
+  var dateStr = today.toLocaleDateString('no-NO', {day:'numeric', month:'long', year:'numeric'});
+  var systemPrompt = 'Du er redaksjonssjef for serien "Hva er greia med..." på NRK Nordland. Dagens dato er ' + dateStr + '. ' +
     'VIKTIG: Svar KUN med rå JSON. Ingen ```json, ingen ``` og ingen tekst utenfor JSON-objektet. ' +
     'ALLE titler MÅ være i formatet "Hva er greia med [tema]?". ' +
-    'JSON-format: {"intro":"En setning på norsk.","ideas":[{"title":"Hva er greia med X?","tag":"bodø","why":"Konkret vinkel.","format":"video","lokal":true,"experts":["Navn, tittel, institusjon"],"sources":[{"text":"Kildenavn","url":"https://ekte-url.no"}],"cases":["Case-tips"]}]} ' +
-    'Gyldige tag-verdier: bodo, nasjonal, teknologi, kultur, samfunn, sport. ' +
-    'Gi 4-5 ideer med lokal Nordland-forankring. Bruk ekte norske URLer.';
+    'AKTUALITET: Hver idé MÅ ha en krok til noe som skjer akkurat nå i ' + dateStr + ' – ny rapport, politisk debatt, sesong, hendelse eller trend fra 2025-2026. Ikke foreslå saker som like gjerne kunne vært laget i 2023 eller 2024. ' +
+    'REKKEVIDDE: Saker skal primært egne seg for NRK-forsiden og nasjonalt publikum. Noen saker kan ha Nordland/Bodø som inngang til et nasjonalt tema, andre kan være helt uten lokal forankring – det viktige er at de er relevante for hele Norge og kan produseres av en journalist i Bodø. Maks 2 av 5 ideer bør være rent lokale Nordland-saker. ' +
+    'JSON-format: {"intro":"En setning.","ideas":[{"title":"Hva er greia med X?","tag":"nasjonal","why":"Konkret vinkel og aktualitetskrok fra april 2026.","format":"video","lokal":false,"experts":["Navn, tittel, institusjon"],"sources":[{"text":"Kildenavn","url":"https://ekte-url.no"}],"cases":["Case-tips"]}]} ' +
+    'Gyldige tag-verdier: bodø, nasjonal, teknologi, kultur, samfunn, sport. ' +
+    'Gi alltid 5 ideer. Bruk ekte norske URLer fra 2025-2026 der mulig.';
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:systemPrompt,messages:morningHistory})});
     var data = await res.json();
